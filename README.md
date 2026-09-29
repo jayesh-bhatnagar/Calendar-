@@ -2,6 +2,10 @@
 
 A beginner-friendly MERN calendar project. The repository keeps the React frontend in `client/` and the Express/Mongoose backend in `server/`.
 
+**This application currently implements a shared calendar. User authentication and private, user-specific calendars are outside the scope of this project.
+Therefore, events created by one client are visible to other clients using
+the deployed application.**
+
 ## Requirements
 
 - Node.js 22.12 or newer (Node.js 24 LTS is recommended)
