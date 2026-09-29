@@ -1,4 +1,6 @@
-const eventsPath = '/api/events';
+const API_URL = import.meta.env.VITE_API_URL;
+
+const eventsPath = `${API_URL}/api/events`;
 
 async function request(path, options = {}) {
   let response;
