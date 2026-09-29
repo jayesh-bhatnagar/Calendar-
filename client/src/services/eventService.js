@@ -32,8 +32,18 @@ function sendJson(path, method, data) {
   });
 }
 
-export function getEvents(options = {}) {
-  return request(eventsPath, options);
+export function getEvents({ signal, startAt, endAt } = {}) {
+  const query = new URLSearchParams();
+  if (startAt) {
+    query.set('start', startAt);
+  }
+  if (endAt) {
+    query.set('end', endAt);
+  }
+
+  const queryString = query.toString();
+  const path = queryString ? `${eventsPath}?${queryString}` : eventsPath;
+  return request(path, { signal });
 }
 
 export function createEvent(data) {
@@ -42,6 +52,14 @@ export function createEvent(data) {
 
 export function updateEvent(id, data) {
   return sendJson(`${eventsPath}/${encodeURIComponent(id)}`, 'PUT', data);
+}
+
+export function updateEventStatus(id, status) {
+  return sendJson(`${eventsPath}/${encodeURIComponent(id)}/status`, 'PATCH', { status });
+}
+
+export function rescheduleEvent(id, startAt) {
+  return sendJson(`${eventsPath}/${encodeURIComponent(id)}/reschedule`, 'PATCH', { startAt });
 }
 
 export function deleteEvent(id) {

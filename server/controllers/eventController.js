@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const Event = require('../models/Event');
+const eventStatuses = ['scheduled', 'completed', 'missed', 'rescheduled'];
 
-function validateBody(body, allowedFields) {
+function validateObjectBody(body, allowedFields) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return 'Request body must be a JSON object.';
   }
@@ -9,6 +10,19 @@ function validateBody(body, allowedFields) {
   const unsupportedField = Object.keys(body).find((field) => !allowedFields.includes(field));
   if (unsupportedField) {
     return `Unsupported field: ${unsupportedField}.`;
+  }
+
+  return null;
+}
+
+function isValidStartAt(value) {
+  return typeof value === 'string' && value.trim() && !Number.isNaN(Date.parse(value));
+}
+
+function validateBody(body, allowedFields) {
+  const objectError = validateObjectBody(body, allowedFields);
+  if (objectError) {
+    return objectError;
   }
 
   if (typeof body.title !== 'string' || !body.title.trim()) {
@@ -19,7 +33,7 @@ function validateBody(body, allowedFields) {
     return 'Description must be a string.';
   }
 
-  if (typeof body.startAt !== 'string' || !body.startAt.trim() || Number.isNaN(Date.parse(body.startAt))) {
+  if (!isValidStartAt(body.startAt)) {
     return 'Start time must be a valid date/time string.';
   }
 
@@ -71,6 +85,44 @@ function isValidEventId(id) {
   return mongoose.isObjectIdOrHexString(id);
 }
 
+function hasEventPassed(event) {
+  return event.startAt.getTime() <= Date.now();
+}
+
+async function markEventMissedIfPassed(event) {
+  if (!hasEventPassed(event)) {
+    return false;
+  }
+
+  if (['scheduled', 'rescheduled'].includes(event.status)) {
+    event.status = 'missed';
+    await event.save();
+  }
+
+  return true;
+}
+
+async function markExpiredEventsMissed() {
+  await Event.updateMany(
+    {
+      startAt: { $lte: new Date() },
+      status: { $in: ['scheduled', 'rescheduled'] },
+    },
+    { $set: { status: 'missed' } },
+  );
+}
+
+async function rejectIfEventPassed(event, response) {
+  if (!await markEventMissedIfPassed(event)) {
+    return false;
+  }
+
+  response.status(409).json({
+    message: 'The event time has passed. This event is locked and was marked missed.',
+  });
+  return true;
+}
+
 async function getEvents(request, response) {
   const start = request.query.start === undefined ? null : parseDateFilter(request.query.start);
   const end = request.query.end === undefined ? null : parseDateFilter(request.query.end);
@@ -105,6 +157,7 @@ async function getEvents(request, response) {
   const filter = Object.keys(startAt).length ? { startAt } : {};
 
   try {
+    await markExpiredEventsMissed();
     const events = await Event.find(filter).sort({ startAt: 1 });
     return response.status(200).json(events);
   } catch (error) {
@@ -123,6 +176,7 @@ async function getEvent(request, response) {
       return response.status(404).json({ message: 'Event not found.' });
     }
 
+    await markEventMissedIfPassed(event);
     return response.status(200).json(event);
   } catch (error) {
     return sendError(error, response);
@@ -141,6 +195,7 @@ async function createEvent(request, response) {
       description: request.body.description,
       startAt: request.body.startAt,
     });
+    await markEventMissedIfPassed(event);
     return response.status(201).json(event);
   } catch (error) {
     return sendError(error, response);
@@ -162,10 +217,90 @@ async function updateEvent(request, response) {
     if (!event) {
       return response.status(404).json({ message: 'Event not found.' });
     }
+    if (await rejectIfEventPassed(event, response)) {
+      return;
+    }
 
     event.title = request.body.title;
     event.description = request.body.description || '';
     event.startAt = request.body.startAt;
+    if (hasEventPassed(event) && ['scheduled', 'rescheduled'].includes(event.status)) {
+      event.status = 'missed';
+    }
+    await event.save();
+    return response.status(200).json(event);
+  } catch (error) {
+    return sendError(error, response);
+  }
+}
+
+async function updateEventStatus(request, response) {
+  if (!isValidEventId(request.params.id)) {
+    return response.status(400).json({ message: 'Event ID is invalid.' });
+  }
+
+  const bodyError = validateObjectBody(request.body, ['status']);
+  if (bodyError) {
+    return response.status(400).json({ message: bodyError });
+  }
+  if (!eventStatuses.includes(request.body.status)) {
+    return response.status(400).json({
+      message: `Status must be one of: ${eventStatuses.join(', ')}.`,
+    });
+  }
+
+  try {
+    const event = await Event.findById(request.params.id);
+    if (!event) {
+      return response.status(404).json({ message: 'Event not found.' });
+    }
+    if (await markEventMissedIfPassed(event)) {
+      if (event.status === 'missed' && request.body.status === 'missed') {
+        return response.status(200).json(event);
+      }
+      return response.status(409).json({
+        message: 'The event time has passed. This event was marked missed and is locked.',
+      });
+    }
+
+    event.status = request.body.status;
+    await event.save();
+    return response.status(200).json(event);
+  } catch (error) {
+    return sendError(error, response);
+  }
+}
+
+async function rescheduleEvent(request, response) {
+  if (!isValidEventId(request.params.id)) {
+    return response.status(400).json({ message: 'Event ID is invalid.' });
+  }
+
+  const bodyError = validateObjectBody(request.body, ['startAt']);
+  if (bodyError) {
+    return response.status(400).json({ message: bodyError });
+  }
+  if (!isValidStartAt(request.body.startAt)) {
+    return response.status(400).json({ message: 'Start time must be a valid date/time string.' });
+  }
+  if (Date.parse(request.body.startAt) <= Date.now()) {
+    return response.status(400).json({ message: 'A rescheduled time must be in the future.' });
+  }
+
+  try {
+    const event = await Event.findById(request.params.id);
+    if (!event) {
+      return response.status(404).json({ message: 'Event not found.' });
+    }
+    if (await rejectIfEventPassed(event, response)) {
+      return;
+    }
+
+    if (!event.originalStartAt) {
+      event.originalStartAt = event.startAt;
+    }
+    event.startAt = request.body.startAt;
+    event.status = 'rescheduled';
     await event.save();
     return response.status(200).json(event);
   } catch (error) {
@@ -179,15 +314,27 @@ async function deleteEvent(request, response) {
   }
 
   try {
-    const event = await Event.findByIdAndDelete(request.params.id);
+    const event = await Event.findById(request.params.id);
     if (!event) {
       return response.status(404).json({ message: 'Event not found.' });
     }
+    if (await rejectIfEventPassed(event, response)) {
+      return;
+    }
 
+    await Event.deleteOne({ _id: event._id });
     return response.status(204).end();
   } catch (error) {
     return sendError(error, response);
   }
 }
 
-module.exports = { createEvent, deleteEvent, getEvent, getEvents, updateEvent };
+module.exports = {
+  createEvent,
+  deleteEvent,
+  getEvent,
+  getEvents,
+  rescheduleEvent,
+  updateEvent,
+  updateEventStatus,
+};

@@ -1,0 +1,15 @@
+.event-day-group {
+  margin-top: 27px;
+}
+
+.event-day-group:first-child {
+  margin-top: 0;
+}
+
+.event-day-heading {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}

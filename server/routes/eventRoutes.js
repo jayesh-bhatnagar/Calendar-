@@ -5,6 +5,8 @@ const {
   deleteEvent,
   getEvent,
   getEvents,
+  rescheduleEvent,
+  updateEventStatus,
   updateEvent,
 } = require('../controllers/eventController');
 
@@ -19,6 +21,8 @@ router.use((request, response, next) => {
 });
 
 router.route('/').get(getEvents).post(createEvent);
+router.patch('/:id/status', updateEventStatus);
+router.patch('/:id/reschedule', rescheduleEvent);
 router.route('/:id').get(getEvent).put(updateEvent).delete(deleteEvent);
 
 module.exports = router;

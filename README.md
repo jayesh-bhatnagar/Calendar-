@@ -94,6 +94,8 @@ All event routes are under `/api/events` and require a connected MongoDB databas
 | `GET` | `/api/events/:id` | Get one event |
 | `POST` | `/api/events` | Create an event |
 | `PUT` | `/api/events/:id` | Replace an event's editable fields |
+| `PATCH` | `/api/events/:id/status` | Set an allowed event status |
+| `PATCH` | `/api/events/:id/reschedule` | Change event time and preserve its original time |
 | `DELETE` | `/api/events/:id` | Delete an event |
 
 The list endpoint accepts optional inclusive date filters. A date-only `end` includes that entire UTC day:
@@ -112,7 +114,11 @@ Create and update requests use JSON with `title` and `startAt`; `description` is
 }
 ```
 
-The server returns `400` for invalid input or IDs, `404` when an event does not exist, and `503` when MongoDB is unavailable. Successful creation returns `201`, reads and updates return `200`, and deletion returns `204` with no response body.
+The server returns `400` for invalid input or IDs, `404` when an event does not exist, `409` when an expired event is locked, and `503` when MongoDB is unavailable. Successful creation returns `201`, reads and updates return `200`, and deletion returns `204` with no response body.
+
+Statuses accepted by the status endpoint are `scheduled`, `completed`, `missed`, and `rescheduled`. Use the reschedule endpoint when changing an event's time; it sets the status to `rescheduled` and keeps the first scheduled time in `originalStartAt`.
+
+Events in `scheduled` or `rescheduled` status become `missed` once their start time passes. The API updates expired events during reads, and the open frontend refreshes at the next event deadline and when the tab becomes visible again. Expired events have their actions disabled; API attempts to edit, delete, complete, or reschedule them return `409`. Rescheduling must happen before the current start time and use a future time.
 
 ## Test the API
 
@@ -126,4 +132,4 @@ The integration test creates a temporary event, checks the CRUD and validation b
 
 ## Current milestone
 
-Milestone 3 adds the React event list, create/edit form, event cards, and delete confirmation. The client sends requests through Vite's `/api` development proxy to the Express API. Monthly calendar navigation and event status actions are not implemented yet. Notifications remain out of scope.
+Milestone 6 completes the responsive calendar and event workflow with loading, error, empty, accessibility, and validation feedback. Notifications remain out of scope.

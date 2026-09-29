@@ -1,30 +1,42 @@
 import { useEffect, useState } from 'react';
-import { localDateTimeToIso, toLocalDateTimeInput } from '../../utils/dateUtils.js';
+import {
+  localDateTimeToIso,
+  toLocalDateTimeInput,
+  toLocalDateTimeInputForDay,
+} from '../../../utils/dateUtils.js';
+import './EventForm.css';
 
-function EventForm({ event, isSubmitting, onSubmit, onCancel }) {
+function EventForm({ event, selectedDate, isSubmitting, onSubmit, onCancel }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startAt, setStartAt] = useState('');
   const [formError, setFormError] = useState('');
+  const [invalidField, setInvalidField] = useState('');
 
   useEffect(() => {
     setTitle(event?.title || '');
     setDescription(event?.description || '');
-    setStartAt(toLocalDateTimeInput(event?.startAt));
+    setStartAt(event?.startAt
+      ? toLocalDateTimeInput(event.startAt)
+      : toLocalDateTimeInputForDay(selectedDate));
     setFormError('');
-  }, [event]);
+    setInvalidField('');
+  }, [event, selectedDate]);
 
   async function handleSubmit(submitEvent) {
     submitEvent.preventDefault();
     setFormError('');
+    setInvalidField('');
 
     const isoStartAt = localDateTimeToIso(startAt);
     if (!title.trim()) {
       setFormError('Enter a title for this event.');
+      setInvalidField('title');
       return;
     }
     if (!isoStartAt) {
       setFormError('Choose a valid date and time.');
+      setInvalidField('startAt');
       return;
     }
 
@@ -51,9 +63,17 @@ function EventForm({ event, isSubmitting, onSubmit, onCancel }) {
           name="title"
           type="text"
           value={title}
-          onChange={(changeEvent) => setTitle(changeEvent.target.value)}
+          onChange={(changeEvent) => {
+            setTitle(changeEvent.target.value);
+            if (invalidField === 'title') {
+              setFormError('');
+              setInvalidField('');
+            }
+          }}
           maxLength={120}
           placeholder="What do you have planned?"
+          aria-invalid={invalidField === 'title'}
+          aria-describedby={invalidField === 'title' ? 'event-form-error' : undefined}
           required
         />
       </div>
@@ -65,7 +85,15 @@ function EventForm({ event, isSubmitting, onSubmit, onCancel }) {
           name="startAt"
           type="datetime-local"
           value={startAt}
-          onChange={(changeEvent) => setStartAt(changeEvent.target.value)}
+          onChange={(changeEvent) => {
+            setStartAt(changeEvent.target.value);
+            if (invalidField === 'startAt') {
+              setFormError('');
+              setInvalidField('');
+            }
+          }}
+          aria-invalid={invalidField === 'startAt'}
+          aria-describedby={invalidField === 'startAt' ? 'event-form-error' : undefined}
           required
         />
       </div>
@@ -83,7 +111,7 @@ function EventForm({ event, isSubmitting, onSubmit, onCancel }) {
         />
       </div>
 
-      {formError && <p className="form-error" role="alert">{formError}</p>}
+      {formError && <p id="event-form-error" className="form-error" role="alert">{formError}</p>}
 
       <div className="form-actions">
         <button className="primary-button" type="submit" disabled={isSubmitting}>

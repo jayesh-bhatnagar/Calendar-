@@ -1,7 +1,16 @@
-import EventCard from './EventCard.jsx';
-import { formatEventDate, getEventDateKey } from '../../utils/dateUtils.js';
+import EventCard from '../EventCard/EventCard.jsx';
+import { formatEventDate, getEventDateKey } from '../../../utils/dateUtils.js';
+import './EventList.css';
 
-function EventList({ events, isMutating, onEdit, onDelete }) {
+function EventList({
+  events,
+  isMutating,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onReschedule,
+  showDateHeadings = true,
+}) {
   const eventsByDate = new Map();
 
   for (const event of events) {
@@ -15,7 +24,9 @@ function EventList({ events, isMutating, onEdit, onDelete }) {
     <div className="event-list">
       {[...eventsByDate.entries()].map(([dateKey, dayEvents]) => (
         <section className="event-day-group" key={dateKey}>
-          <h3 className="event-day-heading">{formatEventDate(dayEvents[0].startAt)}</h3>
+          {showDateHeadings && (
+            <h3 className="event-day-heading">{formatEventDate(dayEvents[0].startAt)}</h3>
+          )}
           {dayEvents.map((event) => (
             <EventCard
               key={event._id}
@@ -23,6 +34,8 @@ function EventList({ events, isMutating, onEdit, onDelete }) {
               isMutating={isMutating}
               onEdit={onEdit}
               onDelete={onDelete}
+              onStatusChange={onStatusChange}
+              onReschedule={onReschedule}
             />
           ))}
         </section>

@@ -1,0 +1,179 @@
+.event-card {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 19px 0;
+  border-top: 1px solid var(--line);
+}
+
+.event-time {
+  padding-top: 2px;
+  color: var(--accent);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.event-content {
+  min-width: 0;
+}
+
+.event-content h3 {
+  overflow-wrap: anywhere;
+  margin: 0 0 5px;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.event-content p {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.event-content .original-time {
+  margin-top: 7px;
+  color: #8b6b36;
+  font-size: 12px;
+}
+
+.event-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.event-status::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8c9b8c;
+  content: '';
+}
+
+.event-status.status-completed::before {
+  background: #4d845d;
+}
+
+.event-status.status-missed::before {
+  background: #bd6155;
+}
+
+.event-status.status-rescheduled::before {
+  background: #bf8d36;
+}
+
+.event-expired-note {
+  grid-column: 2 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.event-actions {
+  display: flex;
+  grid-column: 2 / -1;
+  gap: 15px;
+  margin-top: 1px;
+}
+
+.event-actions button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 650;
+  text-underline-offset: 3px;
+}
+
+.event-actions button:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.event-actions .danger-button {
+  min-height: auto;
+  color: var(--danger);
+}
+
+.reschedule-form {
+  display: grid;
+  grid-column: 2 / -1;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  max-width: 380px;
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 254, 250, 0.8);
+}
+
+.reschedule-form label {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.reschedule-form input {
+  min-height: 38px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid #cbd1c8;
+  border-radius: 3px;
+  background: var(--paper);
+  font: inherit;
+  font-size: 12px;
+}
+
+.reschedule-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.reschedule-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.reschedule-actions button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.reschedule-actions button:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 440px) {
+  .event-card {
+    grid-template-columns: 66px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .event-status {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .event-actions {
+    grid-column: 2;
+    flex-wrap: wrap;
+  }
+
+  .reschedule-form {
+    grid-column: 2;
+  }
+}
