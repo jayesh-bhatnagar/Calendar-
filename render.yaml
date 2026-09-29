@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: calendar-app
+    runtime: node
+    plan: free
+    buildCommand: npm install --prefix client && npm install --prefix server && npm run build:client
+    startCommand: npm run start:server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false

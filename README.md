@@ -133,3 +133,20 @@ The integration test creates a temporary event, checks the CRUD and validation b
 ## Current milestone
 
 Milestone 6 completes the responsive calendar and event workflow with loading, error, empty, accessibility, and validation feedback. Notifications remain out of scope.
+
+## Deploy to Render
+
+This project is configured as one Render Node web service. The build command installs the client and server dependencies and creates the Vite production bundle. Express serves that bundle and the API from the same origin, so production does not need CORS middleware. The Vite `/api` proxy is used only by the local development server.
+
+1. Push the repository to GitHub and create a new Blueprint in Render using this repository. Render will read `render.yaml`.
+2. Set the `MONGODB_URI` environment variable for the service to your MongoDB Atlas connection string. Do not put production credentials in `.env` or commit them.
+3. Deploy the Blueprint. Render supplies `PORT`; the server binds to `0.0.0.0` and uses `/api/health` as its health check.
+
+The health check returns HTTP 200 only when MongoDB is connected. Check the Render service logs if the deployment does not become healthy, and confirm the Atlas network access rules permit connections from the Render service.
+
+To run the same production-style setup locally, build the client and start the combined server from the project root:
+
+```sh
+npm run build
+npm start
+```
